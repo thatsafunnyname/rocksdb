@@ -548,6 +548,17 @@ class PosixEnv : public Env {
   virtual Status LockFile(const std::string& fname, FileLock** lock) override {
     *lock = nullptr;
     Status result;
+    
+    mutex_lockedFiles.Lock();
+    if( lockedFiles.end() != lockedFiles.find(fname) ){
+      mutex_lockedFiles.Unlock();
+      // file is already locked
+      errno = ENOLCK;
+      result = IOError("lock " + fname, errno);
+      return result;
+    }
+    mutex_lockedFiles.Unlock();
+    
     int fd;
     {
       IOSTATS_TIMER_GUARD(open_nanos);
