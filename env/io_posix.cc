@@ -154,8 +154,10 @@ bool IsSyncFileRangeSupported(int fd) {
   // (`ROCKSDB_RANGESYNC_PRESENT`). If we are unsure, or if any of the checks
   // fail in unexpected ways, we allow `sync_file_range` to be used. This way
   // should minimize risk of impacting existing use cases.
+  int ret;
+#ifndef ROCKSDB_DO_NOT_CHECK_ZFS_SYNC_FILE_RANGE
   struct statfs buf;
-  int ret = fstatfs(fd, &buf);
+  ret = fstatfs(fd, &buf);
   assert(ret == 0);
   if (ret == 0 && buf.f_type == ZFS_SUPER_MAGIC) {
     // Testing on ZFS showed the writeback did not happen asynchronously when
@@ -164,6 +166,7 @@ bool IsSyncFileRangeSupported(int fd) {
     // even though this'll incur extra I/O for metadata.
     return false;
   }
+#endif
 
   ret = sync_file_range(fd, 0 /* offset */, 0 /* nbytes */, 0 /* flags */);
   assert(!(ret == -1 && errno != ENOSYS));
